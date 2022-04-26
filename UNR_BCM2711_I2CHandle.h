@@ -13,14 +13,14 @@
 #include <cerrno>         // errno
 #include <system_error>   // std::error_code, std::generic_category
 // std::error_condition
-//# define DEBUG 1
+//# define DEBUG 1 // use only when debugging on screen
 
-constexpr unsigned int RPI4_I2C_INSTANCE0 = 0;
-constexpr unsigned int RPI4_I2C_INSTANCE1 = 1;
+constexpr unsigned int RPI4_I2C_INSTANCE0 = 0U;
+constexpr unsigned int RPI4_I2C_INSTANCE1 = 1U;
 constexpr char RPI4_I2C_DEV_INSTANCE0[] = "/dev/i2c-0";  // do not use this for raspberry pi 4 3 3b+ zero and zero w
 constexpr char RPI4_I2C_DEV_INSTANCE1[] = "/dev/i2c-1";
 constexpr signed int I2OCTRL_FAIL = -1;
-constexpr unsigned int UNR_I2C_MAX_BYTES = 255;
+constexpr unsigned int UNR_I2C_MAX_BYTES = 255U;
 
 class UNR_I2CHandle {
 private:
@@ -44,8 +44,8 @@ public:
 //protected:
 	int i2c_write_simple(unsigned char& _buffer, const unsigned short& numByte) noexcept(false);
 	int i2c_read_simple(unsigned char& buffer, const unsigned short& numBytes) noexcept(false);
-	int i2c_writeReg(unsigned char& buffer, unsigned char& register_address  , const unsigned short& numBytes   ) noexcept(false);
-	int i2c_readReg(unsigned char& buffer, unsigned char& register_address  , const unsigned short& numBytes   ) noexcept(false);
+	int i2c_writeReg(unsigned char& buffer, unsigned char& register_address  , const unsigned short& numBytes) noexcept(false);
+	int i2c_readReg(unsigned char& buffer, unsigned char& register_address  , const unsigned short& numBytes) noexcept(false);
 
 };
 

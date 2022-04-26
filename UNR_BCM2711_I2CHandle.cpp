@@ -165,16 +165,20 @@ int UNR_I2CHandle::i2c_read_simple(unsigned char& buffer, const unsigned short& 
 
 
 /*
-* Write
+* Write function for traditional I2C protocol writes which are directed towards a particular register
+* Inputs are 1. Starting address of the buffer to write, 2. Register address to write, 3. Number of bytes to write
+* Output: In debug mode, the errors will be thrown on screen with a return value of -1, 
+* in non debug mode,  returns -1 for failed write transactions and returns number of bytes for successful writes 
 */
 int UNR_I2CHandle::i2c_writeReg(unsigned char& _buffer, unsigned char& register_address, const unsigned short& numBytes) noexcept(false)
 {
+	// the write buffer needs to be preloaded with the register address.
 	memset((void *)m_tempBuffer, 0x00, UNR_I2C_MAX_BYTES);
 	m_tempBuffer[0] = register_address;
 	memcpy((void *)&m_tempBuffer[1], (const void*)&_buffer, numBytes);
 	
 #ifdef DEBUG
-	m_s4Return_in = read(m_intFile_descriptor, (void*)(&m_tempBuffer), static_cast<size_t>(numBytes+1));
+	m_s4Return_in = write(m_intFile_descriptor, (void*)(&m_tempBuffer), static_cast<size_t>(numBytes+1));
 	if (m_s4Return_in < 0)
 	{
 		std::error_code ec(errno, std::generic_category());
@@ -183,12 +187,19 @@ int UNR_I2CHandle::i2c_writeReg(unsigned char& _buffer, unsigned char& register_
 		if (ec != ok) puts(ec.message().c_str());
 		throw std::runtime_error(std::string("I2C Could not handle write Operation"));
 	}
-	return m_s4Return_in;
+	return (m_s4Return_in-1);
 #else	
 	return write(m_intFile_descriptor, (void*)(&m_tempBuffer), static_cast<size_t>(numBytes + 1)) == -1 ? -1 : numBytes;
 #endif
 }
 
+
+/*
+* Read function for traditional I2C protocol reads which are directed from a particular register
+* Inputs are 1. Starting address of the empty buffer to read, 2. Register address to read from, 3. Number of bytes to read
+* Output: In debug mode, the errors will be thrown on screen with a return value of -1,
+* in non debug mode,  returns -1 for failed transactions and returns number of bytes for successful writes
+*/
 int UNR_I2CHandle::i2c_readReg(unsigned char& buffer, unsigned char& register_address, const unsigned short& numBytes) noexcept(false)
 {
 #ifdef DEBUG
@@ -221,6 +232,10 @@ int UNR_I2CHandle::i2c_readReg(unsigned char& buffer, unsigned char& register_ad
 #endif
 }
 
+
+/*
+* Destructor for the i2c device driver class
+*/
 UNR_I2CHandle::~UNR_I2CHandle(void)
 {
 	if (m_intFile_descriptor != 0) close(m_intFile_descriptor);
