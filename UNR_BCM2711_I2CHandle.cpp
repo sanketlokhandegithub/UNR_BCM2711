@@ -18,6 +18,8 @@
 *					Do not use i2c-0 
 * Unauthorized Distrubution is strictly prohibited.
 * Rev 1: I2C support added with simple read/ write and Register Read /write options. 
+* Rev 2: Took the buffer dependency out of the system for write/read operations. 
+*		 Reading process for I2C did not yield good results for more than 70 odd bytes at a time. One can read in blocks of 50bytes at a time for now.
 */
 
 
@@ -65,7 +67,7 @@ UNR_I2CHandle::UNR_I2CHandle(unsigned char _instance,
 							unsigned short int _u1Mode) noexcept(false) : m_intFile_descriptor(0)
 																		, m_ucDecive_Address(_dev_address)
 {
-	memset((void*)m_tempBuffer, 0x00, UNR_I2C_MAX_BYTES);
+	//memset((void*)m_tempBuffer, 0x00, UNR_I2C_MAX_BYTES);
 
 	switch (_instance)
 	{
@@ -116,54 +118,6 @@ UNR_I2CHandle::UNR_I2CHandle(unsigned char _instance,
 #endif
 }
 
-/* This function is a simple write function to write to slave devices which does not have specific registers to write. 
-* First Input to the function is reference to first byte of the buffer address to write, second Input is the number of bytes to write.
-* Output of this function in debug mode is the Error as returned by "write" function. And in non debug mode, it returns a -1 on unsuccessful writes, and 
-*/
-int UNR_I2CHandle::i2c_write_simple(unsigned char& _buffer, const unsigned short& numBytes) noexcept(false)
-{
-#ifdef DEBUG
-	m_s4Return_out = write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes));
-	if (m_s4Return_out < 0)
-	{
-		std::error_code ec(errno, std::generic_category());
-		std::error_condition ok;
-		std::string msg = ec.message();
-		if (ec != ok) puts(ec.message().c_str());
-		throw std::runtime_error(std::string("I2C Could not handle write Operation"));
-	}
-	return m_s4Return_out;
-#else
-	return write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;
-#endif
-}
-
-/*
-* Simple read function follows similar instruction as simple write function.
-* input : starting address / pointer of an empty buffer. if the buffer is not empty, this function will overwrite the buffer.
-* Second input is the number of bytes to read.
-* Output is errors thrown on screen if unsuccessful operation otherwise it will return the number of bytes read 
-*/
-int UNR_I2CHandle::i2c_read_simple(unsigned char& buffer, const unsigned short& numBytes) noexcept(false)
-{
-#ifdef DEBUG
-	
-	m_s4Return_in = read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes));
-	if (m_s4Return_in < 0)
-	{
-		std::error_code ec(errno, std::generic_category());
-		std::error_condition ok;
-		std::string msg = ec.message();
-		if (ec != ok) puts(ec.message().c_str());
-		throw std::runtime_error(std::string("I2C Could not handle Read Operation"));
-	}
-	return m_s4Return_in;
-#else
-	return read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;
-#endif
-}
-
-
 /*
 * Write function for traditional I2C protocol writes which are directed towards a particular register
 * Inputs are 1. Starting address of the buffer to write, 2. Register address to write, 3. Number of bytes to write
@@ -172,6 +126,7 @@ int UNR_I2CHandle::i2c_read_simple(unsigned char& buffer, const unsigned short& 
 */
 int UNR_I2CHandle::i2c_writeReg(unsigned char& _buffer, unsigned char& register_address, const unsigned short& numBytes) noexcept(false)
 {
+	/*
 	// the write buffer needs to be preloaded with the register address.
 	memset((void *)m_tempBuffer, 0x00, UNR_I2C_MAX_BYTES);
 	m_tempBuffer[0] = register_address;
@@ -191,6 +146,31 @@ int UNR_I2CHandle::i2c_writeReg(unsigned char& _buffer, unsigned char& register_
 #else	
 	return write(m_intFile_descriptor, (void*)(&m_tempBuffer), static_cast<size_t>(numBytes + 1)) == -1 ? -1 : numBytes;
 #endif
+	*/
+
+	// new method: lets get the buffer dependency out of the system
+
+#ifdef DEBUG
+	if(m_s4Return_in = (write(m_intFile_descriptor, (void *) register_address, 1U)) == 1)
+		m_s4Return_in = write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes));
+	else
+		throw std::runtime_error(std::string("I2C Could not handle write Operation"));
+
+	if (m_s4Return_in < 0)
+	{
+		std::error_code ec(errno, std::generic_category());
+		std::error_condition ok;
+		std::string msg = ec.message();
+		if (ec != ok) puts(ec.message().c_str());
+		throw std::runtime_error(std::string("I2C Could not handle write Operation"));
+	}
+	return (m_s4Return_in - 1);
+#else
+	if ((write(m_intFile_descriptor, (void*) (&register_address), 1U)) == 1)
+		return (write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes)));
+	else
+		return -1;
+#endif
 }
 
 
@@ -200,7 +180,7 @@ int UNR_I2CHandle::i2c_writeReg(unsigned char& _buffer, unsigned char& register_
 * Output: In debug mode, the errors will be thrown on screen with a return value of -1,
 * in non debug mode,  returns -1 for failed transactions and returns number of bytes for successful writes
 */
-int UNR_I2CHandle::i2c_readReg(unsigned char& buffer, unsigned char& register_address, const unsigned short& numBytes) noexcept(false)
+int UNR_I2CHandle::i2c_readReg(unsigned char& buffer, unsigned char& register_address, const unsigned short& numBytes) noexcept(false) 
 {
 #ifdef DEBUG
 	m_s4Return_in = write(m_intFile_descriptor, (const void*)&register_address, 1U);
@@ -225,12 +205,63 @@ int UNR_I2CHandle::i2c_readReg(unsigned char& buffer, unsigned char& register_ad
 	}
 	return m_s4Return_in;
 #else
-	if (write(m_intFile_descriptor, (const void*)&register_address, 1U) < 0)
+	if (write(m_intFile_descriptor, (const void*)( & register_address ), 1U) < 0)
 		return -1;
-	
 	return read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;
 #endif
 }
+
+
+/*
+* ****** IMP ******** Not Sure this will work for I2C ics which have specific register read / writes. Can be used for DIGI pots I guess
+* This function is a simple write function to write to slave devices which does not have specific registers to write.
+* First Input to the function is reference to first byte of the buffer address to write, second Input is the number of bytes to write.
+* Output of this function in debug mode is the Error as returned by "write" function. And in non debug mode, it returns a -1 on unsuccessful writes, and
+*/
+int UNR_I2CHandle::i2c_write_simple(unsigned char& _buffer, const unsigned short& numBytes) noexcept(false)
+{
+#ifdef DEBUG
+	m_s4Return_out = write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes));
+	if (m_s4Return_out < 0)
+	{
+		std::error_code ec(errno, std::generic_category());
+		std::error_condition ok;
+		std::string msg = ec.message();
+		if (ec != ok) puts(ec.message().c_str());
+		throw std::runtime_error(std::string("I2C Could not handle write Operation"));
+	}
+	return m_s4Return_out;
+#else
+	return write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;
+#endif
+}
+
+/*
+* ****** IMP ******** Not Sure this will work for I2C ics which have specific register read / writes. Can be used for DIGI pots I guess
+* Simple read function follows similar instruction as simple write function.
+* input : starting address / pointer of an empty buffer. if the buffer is not empty, this function will overwrite the buffer.
+* Second input is the number of bytes to read.
+* Output is errors thrown on screen if unsuccessful operation otherwise it will return the number of bytes read
+*/
+int UNR_I2CHandle::i2c_read_simple(unsigned char& buffer, const unsigned short& numBytes) noexcept(false)
+{
+#ifdef DEBUG
+
+	m_s4Return_in = read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes));
+	if (m_s4Return_in < 0)
+	{
+		std::error_code ec(errno, std::generic_category());
+		std::error_condition ok;
+		std::string msg = ec.message();
+		if (ec != ok) puts(ec.message().c_str());
+		throw std::runtime_error(std::string("I2C Could not handle Read Operation"));
+	}
+	return m_s4Return_in;
+#else
+	return read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;
+#endif
+}
+
 
 
 /*

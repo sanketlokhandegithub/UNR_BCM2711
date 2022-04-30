@@ -26,7 +26,7 @@ class UNR_I2CHandle {
 private:
 	int m_intFile_descriptor;
 	unsigned char m_ucDecive_Address;
-	unsigned char m_tempBuffer[UNR_I2C_MAX_BYTES];
+	//unsigned char m_tempBuffer[UNR_I2C_MAX_BYTES];
 	void init_file_descriptor(const char _charFD[]) noexcept(false);
 	void set_device_mode(unsigned int _u1Mode) const noexcept(false);
 	
