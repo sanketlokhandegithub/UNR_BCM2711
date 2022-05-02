@@ -94,6 +94,35 @@ int MPU6050_RaspbPi::setSleepEnabled(bool _in)
 	return 1;
 }
 
+int MPU6050_RaspbPi::getSensorValues()
+{ 
+	if (this->i2c_readReg(m_sensorvalues->sensorValues_t.Accelx_t.u8_AXData[0], accessSensorValuesRegister, 14U) < 0) return -1;
+	m_sensorvalues->swapAllBytes();		// check if this is needed
+	return 1;
+}
+
+int MPU6050_RaspbPi::getDoubleSensorValues(double* accel, double* gyro, double temperature)
+{
+	if (getSensorValues() < 0)
+	{
+		accel[0] = (double)_f2sComplement(m_sensorvalues->sensorValues_t.Accelx_t.u16_AXData);
+		accel[1] = (double)_f2sComplement(m_sensorvalues->sensorValues_t.Accely_t.u16_AYData);
+		accel[2] = (double)_f2sComplement(m_sensorvalues->sensorValues_t.Accelz_t.u16_AZData);
+
+		temperature = (double)_f2sComplement(m_sensorvalues->sensorValues_t.Temperature_t.u16_TData);
+
+		gyro[0] = (double)_f2sComplement(m_sensorvalues->sensorValues_t.Gyrox_t.u16_GXData);
+		gyro[1] = (double)_f2sComplement(m_sensorvalues->sensorValues_t.Gyroy_t.u16_GYData);
+		gyro[2] = (double)_f2sComplement(m_sensorvalues->sensorValues_t.Gyroz_t.u16_GZData);
+
+		return 1;
+	}
+
+	else
+		return -1;
+	
+	
+}
 
 signed int MPU6050_RaspbPi::_f2sComplement(uint16_t& _in)
 {
@@ -107,3 +136,7 @@ signed int MPU6050_RaspbPi::_f2sComplement(uint16_t& _in)
 		return _in;
 }
 
+MPU6050_RaspbPi::~MPU6050_RaspbPi(void)
+{
+	delete m_sensorvalues;
+}

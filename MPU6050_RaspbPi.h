@@ -90,11 +90,15 @@ private:
 		}
 	};
 
-	signed int _f2sComplement(uint16_t& );
+
+	MPU6050_SensorValues* m_sensorvalues;
 	unsigned char tempBuffer[2];
 	unsigned char accessRegisterID;
+	unsigned char accessSensorValuesRegister; 
+
+	signed int _f2sComplement(uint16_t& );
 	void inline resetBuffer(void) { memset(tempBuffer, NULL, 2U); }
-	
+		
 
 	/** Get and Set clock source setting.
  * An internal 8MHz oscillator, gyroscope based clock, or external sources can
@@ -178,13 +182,24 @@ private:
 */
 	bool getSleepEnabled();
 	int setSleepEnabled(bool);
+
 public:
     MPU6050_RaspbPi(unsigned char _devAddress) : UNR_I2CHandle(RPI4_I2C_INSTANCE1, _devAddress, I2C_SLAVE)
 												, accessRegisterID(0x00) 
 												, tempBuffer({0x00 , 0x00})
-													
-												{ }
+												, accessSensorValuesRegister(MPU6050_RA_ACCEL_XOUT_H)
+	{
+		m_sensorvalues = new MPU6050_SensorValues;
+	}
 
+	MPU6050_RaspbPi() = delete;
+	MPU6050_RaspbPi(const MPU6050_RaspbPi&) = delete;
+	MPU6050_RaspbPi(const MPU6050_RaspbPi&&) = delete;
+	MPU6050_RaspbPi& operator = (MPU6050_RaspbPi&) = delete;
+
+/*
+* Destructor function
+*/
     ~MPU6050_RaspbPi(void);
 
 	/** Power on and prepare for general usage.
@@ -196,8 +211,23 @@ public:
  */
     int initialize(void);
 
+	/** Get raw 6-axis motion sensor readings (accel/gyro) and Temperature values.
+	 * Retrieves all currently available motion sensor values.
+	 * @param ax 16-bit signed integer container for accelerometer X-axis value
+	 * @param ay 16-bit signed integer container for accelerometer Y-axis value
+	 * @param az 16-bit signed integer container for accelerometer Z-axis value
+	 * @param temp 
+	 * @param gx 16-bit signed integer container for gyroscope X-axis value
+	 * @param gy 16-bit signed integer container for gyroscope Y-axis value
+	 * @param gz 16-bit signed integer container for gyroscope Z-axis value
+	 * @see 
+	 * @see 
+	 * @see MPU6050_RA_ACCEL_XOUT_H
+	 */
 
+	int getSensorValues();
+	int getDoubleSensorValues(double*, double*, double);
+	int getRAWSensorValues(uint16_t *)
 
-    int MPU6050_offsetTest();
 };
 

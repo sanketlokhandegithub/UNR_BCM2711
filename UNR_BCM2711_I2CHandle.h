@@ -20,7 +20,7 @@ constexpr unsigned int RPI4_I2C_INSTANCE1 = 1U;
 constexpr char RPI4_I2C_DEV_INSTANCE0[] = "/dev/i2c-0";  // do not use this for raspberry pi 4 3 3b+ zero and zero w
 constexpr char RPI4_I2C_DEV_INSTANCE1[] = "/dev/i2c-1";
 constexpr signed int I2OCTRL_FAIL = -1;
-constexpr unsigned int UNR_I2C_MAX_BYTES = 255U;
+//constexpr unsigned int UNR_I2C_MAX_BYTES = 255U;
 
 class UNR_I2CHandle {
 private:
