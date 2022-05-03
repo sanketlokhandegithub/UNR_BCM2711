@@ -20,6 +20,7 @@
 * Rev 1: I2C support added with simple read/ write and Register Read /write options. 
 * Rev 2: Took the buffer dependency out of the system for write/read operations. 
 *		 Reading process for I2C did not yield good results for more than 70 odd bytes at a time. One can read in blocks of 50bytes at a time for now.
+* Rev 3: Reverting back on the I2C databuffers on write operation. Write does now work without the buffers.
 */
 
 
@@ -126,7 +127,6 @@ UNR_I2CHandle::UNR_I2CHandle(unsigned char _instance,
 */
 int UNR_I2CHandle::i2c_writeReg(unsigned char& _buffer, unsigned char& register_address, const unsigned short& numBytes) noexcept(false)
 {
-	/*
 	// the write buffer needs to be preloaded with the register address.
 	memset((void *)m_tempBuffer, 0x00, UNR_I2C_MAX_BYTES);
 	m_tempBuffer[0] = register_address;
@@ -145,31 +145,6 @@ int UNR_I2CHandle::i2c_writeReg(unsigned char& _buffer, unsigned char& register_
 	return (m_s4Return_in-1);
 #else	
 	return write(m_intFile_descriptor, (void*)(&m_tempBuffer), static_cast<size_t>(numBytes + 1)) == -1 ? -1 : numBytes;
-#endif
-	*/
-
-	// new method: lets get the buffer dependency out of the system
-
-#ifdef DEBUG
-	if(m_s4Return_in = (write(m_intFile_descriptor, (void *) register_address, 1U)) == 1)
-		m_s4Return_in = write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes));
-	else
-		throw std::runtime_error(std::string("I2C Could not handle write Operation"));
-
-	if (m_s4Return_in < 0)
-	{
-		std::error_code ec(errno, std::generic_category());
-		std::error_condition ok;
-		std::string msg = ec.message();
-		if (ec != ok) puts(ec.message().c_str());
-		throw std::runtime_error(std::string("I2C Could not handle write Operation"));
-	}
-	return (m_s4Return_in - 1);
-#else
-	if ((write(m_intFile_descriptor, (void*) (&register_address), 1U)) == 1)
-		return (write(m_intFile_descriptor, (void*)(&_buffer), static_cast<size_t>(numBytes)));
-	else
-		return -1;
 #endif
 }
 
@@ -205,12 +180,17 @@ int UNR_I2CHandle::i2c_readReg(unsigned char& buffer, unsigned char& register_ad
 	}
 	return m_s4Return_in;
 #else
-	if (write(m_intFile_descriptor, (const void*)( & register_address ), 1U) < 0)
+	/*if (write(m_intFile_descriptor, (const void*)( & register_address ), 1U) < 0)
 		return -1;
-	return read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;
+	return read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;*/
+
+	if (write(m_intFile_descriptor, (const void*)(&register_address), 1U) > 0)
+		return read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes));
+	else
+		return -1;
+
 #endif
 }
-
 
 /*
 * ****** IMP ******** Not Sure this will work for I2C ics which have specific register read / writes. Can be used for DIGI pots I guess
@@ -261,8 +241,6 @@ int UNR_I2CHandle::i2c_read_simple(unsigned char& buffer, const unsigned short& 
 	return read(m_intFile_descriptor, (void*)(&buffer), static_cast<size_t>(numBytes)) == -1 ? -1 : numBytes;
 #endif
 }
-
-
 
 /*
 * Destructor for the i2c device driver class
