@@ -66,9 +66,9 @@ void UNR_I2CHandle::set_device_mode(unsigned int _u1Mode) const noexcept(false)
 UNR_I2CHandle::UNR_I2CHandle(unsigned char _instance,
 							unsigned char _dev_address,
 							unsigned short int _u1Mode) noexcept(false) : m_intFile_descriptor(0)
-																		, m_ucDecive_Address(_dev_address)
+												      , m_ucDecive_Address(_dev_address)
 {
-	//memset((void*)m_tempBuffer, 0x00, UNR_I2C_MAX_BYTES);
+	memset((void*)m_tempBuffer, 0x00, UNR_I2C_MAX_BYTES);
 
 	switch (_instance)
 	{
