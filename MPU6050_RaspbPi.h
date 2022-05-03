@@ -100,6 +100,9 @@ private:
 	void inline resetBuffer(void) { memset(tempBuffer, NULL, 2U); }
 		
 
+	double gyroScale;
+	double accelScale;
+
 	/** Get and Set clock source setting.
  * An internal 8MHz oscillator, gyroscope based clock, or external sources can
  * be selected as the MPU-60X0 clock source. When the internal 8 MHz oscillator
@@ -188,6 +191,8 @@ public:
 												, accessRegisterID(0x00) 
 												, tempBuffer({0x00 , 0x00})
 												, accessSensorValuesRegister(MPU6050_RA_ACCEL_XOUT_H)
+												, gyroScale(MPU6050_GYRO_FS_250_SCALE)
+												, accelScale(MPU6050_ACCEL_FS_2_SCALE)
 	{
 		m_sensorvalues = new MPU6050_SensorValues;
 	}
@@ -226,8 +231,8 @@ public:
 	 */
 
 	int getSensorValues();
-	int getDoubleSensorValues(double*, double*, double);
-	int getRAWSensorValues(uint16_t *)
+	int getDoubleSensorValues(double*, double*, double*);
+	//int getRAWSensorValues(uint16_t*);
 
 };
 
