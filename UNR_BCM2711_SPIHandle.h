@@ -33,7 +33,7 @@ constexpr unsigned int RPI3_SPI_INSTANCE0            = 0;
 constexpr unsigned int RPI3_SPI_INSTANCE1            = 1;
 constexpr char RPI3_SPI_DEV_INSTANCE0[]              = "/dev/spidev0.0";
 constexpr char RPI3_SPI_DEV_INSTANCE1[]              = "/dev/spidev0.1";
-constexpr signed int OV_IOCTRL_FAIL                  = -1;
+constexpr signed int UNR_IOCTRL_FAIL                 = -1;
 
 
 	class UNR_SPIHandle
